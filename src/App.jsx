@@ -3,7 +3,7 @@ import {
   Folder, File, Home, HardDrive, Image, FileText, Music, Video, 
   Archive, Code, ChevronRight, ChevronLeft, Search, Grid, List, 
   Download, Trash2, FolderPlus, FilePlus, Copy, RefreshCw, Scissors,
-  Star, Clock, Settings, MoreVertical, X, Info
+  Star, Clock, Settings, MoreVertical, X, Info, UploadCloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -22,9 +22,11 @@ export default function FileManager() {
   const [history, setHistory] = useState(['C:\\\\']);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+  const [dragOverItem, setDragOverItem] = useState(null);
+  const [isExternalDragOver, setIsExternalDragOver] = useState(false);
 
-  // Mock File System with more metadata
-  const fileSystem = useMemo(() => ({
+  // Initial Mock File System
+  const initialFileSystem = {
     'C:\\\\': {
       type: 'drive',
       children: [
@@ -63,7 +65,9 @@ export default function FileManager() {
         { name: 'Skyline.jpg', type: 'file', size: '3.1 MB', date: '14/01/2026' }
       ]
     }
-  }), []);
+  };
+
+  const [fileSystem, setFileSystem] = useState(initialFileSystem);
 
   const getFileIcon = (name, type) => {
     if (type === 'folder' || type === 'drive') return <Folder className="w-10 h-10 text-amber-400 fill-amber-400/20" />;
@@ -119,6 +123,83 @@ export default function FileManager() {
     } else {
       setSelectedItems([item]);
     }
+  };
+
+  // Drag and Drop Logic
+  const handleDragStart = (e, item) => {
+    e.dataTransfer.setData('item', JSON.stringify(item));
+    e.dataTransfer.setData('sourcePath', currentPath);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, item) => {
+    e.preventDefault();
+    if (item && (item.type === 'folder' || item.type === 'drive')) {
+      setDragOverItem(item.name);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverItem(null);
+  };
+
+  const handleDrop = (e, targetFolderItem) => {
+    e.preventDefault();
+    setDragOverItem(null);
+    setIsExternalDragOver(false);
+
+    // 1. Handle External Files (from OS)
+    if (e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      const newFiles = files.map(file => ({
+        name: file.name,
+        type: 'file',
+        size: (file.size / 1024 / 1024).toFixed(1) + ' MB',
+        date: new Date().toLocaleDateString()
+      }));
+
+      setFileSystem(prev => {
+        const newFS = { ...prev };
+        const destPath = targetFolderItem 
+          ? `${currentPath}${targetFolderItem.name}\\\\`
+          : currentPath;
+        
+        if (!newFS[destPath]) {
+          newFS[destPath] = { type: 'folder', children: [] };
+        }
+        newFS[destPath].children = [...newFS[destPath].children, ...newFiles];
+        return newFS;
+      });
+      return;
+    }
+
+    // 2. Handle Internal Move
+    const itemData = e.dataTransfer.getData('item');
+    const sourcePath = e.dataTransfer.getData('sourcePath');
+    
+    if (!itemData || !sourcePath) return;
+    
+    const draggedItem = JSON.parse(itemData);
+    const targetPath = targetFolderItem 
+      ? `${currentPath}${targetFolderItem.name}\\\\`
+      : null; // Null if dropped on empty space in current directory (no move)
+
+    if (!targetPath || targetPath === sourcePath || targetPath === sourcePath + draggedItem.name + '\\\\') return;
+
+    setFileSystem(prev => {
+      const newFS = { ...prev };
+      
+      // Remove from source
+      newFS[sourcePath].children = newFS[sourcePath].children.filter(i => i.name !== draggedItem.name);
+      
+      // Add to target
+      if (!newFS[targetPath]) {
+        newFS[targetPath] = { type: 'folder', children: [] };
+      }
+      newFS[targetPath].children = [...newFS[targetPath].children, draggedItem];
+      
+      return newFS;
+    });
   };
 
   const goBack = () => {
@@ -254,7 +335,27 @@ export default function FileManager() {
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative overflow-hidden bg-white">
+      <main 
+        className="flex-1 flex flex-col relative overflow-hidden bg-white"
+        onDragOver={(e) => { e.preventDefault(); setIsExternalDragOver(true); }}
+        onDragLeave={() => setIsExternalDragOver(false)}
+        onDrop={(e) => handleDrop(e, null)}
+      >
+        {/* External Drag Overlay */}
+        <AnimatePresence>
+          {isExternalDragOver && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 bg-sky-500/10 backdrop-blur-sm border-4 border-dashed border-sky-500 m-4 rounded-3xl flex flex-col items-center justify-center pointer-events-none"
+            >
+              <UploadCloud className="w-16 h-16 text-sky-500 mb-4 animate-bounce" />
+              <p className="text-xl font-bold text-sky-600">Rilascia per caricare i file qui</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Header/Toolbar */}
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-4 z-10">
           <div className="flex items-center gap-2">
@@ -343,11 +444,17 @@ export default function FileManager() {
               >
                 {currentItems.map((item) => {
                   const isSelected = selectedItems.some(i => i.name === item.name);
+                  const isHoveredAsDropTarget = dragOverItem === item.name;
                   
                   if (viewMode === 'grid') {
                     return (
                       <motion.div
                         key={item.name}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, item)}
+                        onDragOver={(e) => handleDragOver(e, item)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, item)}
                         whileHover={{ y: -4 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={(e) => handleItemSelect(item, e)}
@@ -356,7 +463,8 @@ export default function FileManager() {
                           "group relative flex flex-col items-center p-4 rounded-2xl cursor-pointer transition-all duration-300",
                           isSelected 
                             ? "bg-sky-50 ring-2 ring-sky-500/20" 
-                            : "hover:bg-slate-50 border border-transparent hover:border-slate-100"
+                            : "hover:bg-slate-50 border border-transparent hover:border-slate-100",
+                          isHoveredAsDropTarget && "bg-sky-100 ring-2 ring-sky-500 scale-105"
                         )}
                       >
                         <div className="mb-4 relative">
@@ -383,12 +491,18 @@ export default function FileManager() {
                   return (
                     <motion.div
                       key={item.name}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item)}
+                      onDragOver={(e) => handleDragOver(e, item)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, item)}
                       whileHover={{ x: 4 }}
                       onClick={(e) => handleItemSelect(item, e)}
                       onDoubleClick={() => handleItemClick(item)}
                       className={cn(
                         "grid grid-cols-[1fr_150px_150px_100px] gap-4 items-center px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
-                        isSelected ? "bg-sky-50 border-l-4 border-sky-500" : "hover:bg-slate-50 border-l-4 border-transparent"
+                        isSelected ? "bg-sky-50 border-l-4 border-sky-500" : "hover:bg-slate-50 border-l-4 border-transparent",
+                        isHoveredAsDropTarget && "bg-sky-100 ring-1 ring-sky-500"
                       )}
                     >
                       <div className="flex items-center gap-3">
