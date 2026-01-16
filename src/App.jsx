@@ -73,7 +73,7 @@ export default function FileManager() {
     if (type === 'folder' || type === 'drive') {
       return (
         <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
-          <img src="/folder.png" alt="Folder" className="w-full h-full object-contain" />
+          <img src="/folder.png" alt="Folder" className="w-full h-full object-contain mix-blend-multiply" />
         </div>
       );
     }
@@ -274,7 +274,7 @@ export default function FileManager() {
       >
         <div className="p-6 flex items-center gap-3">
           <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-sky-100 overflow-hidden border border-slate-100">
-            <img src="/logo.png" alt="CosmoNav Logo" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt="CosmoNav Logo" className="w-full h-full object-cover mix-blend-multiply" />
           </div>
           <div>
             <h1 className="font-bold text-slate-800 leading-tight">CosmoNav</h1>
