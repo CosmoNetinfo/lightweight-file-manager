@@ -5,6 +5,7 @@ Un file manager ultraleggero e performante sviluppato in React come alternativa 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
+<img width="1911" height="911" alt="Screenshot 2026-01-16 054657" src="https://github.com/user-attachments/assets/50cc3112-4a1a-4006-bdcf-5384dd595f51" />
 
 ## ✨ Caratteristiche
 
