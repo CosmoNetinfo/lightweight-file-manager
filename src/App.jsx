@@ -70,7 +70,13 @@ export default function FileManager() {
   const [fileSystem, setFileSystem] = useState(initialFileSystem);
 
   const getFileIcon = (name, type) => {
-    if (type === 'folder' || type === 'drive') return <Folder className="w-10 h-10 text-amber-400 fill-amber-400/20" />;
+    if (type === 'folder' || type === 'drive') {
+      return (
+        <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
+          <img src="/folder.png" alt="Folder" className="w-full h-full object-contain" />
+        </div>
+      );
+    }
     
     const ext = name.split('.').pop().toLowerCase();
     const baseClass = "w-10 h-10";
@@ -267,8 +273,8 @@ export default function FileManager() {
         className="w-64 bg-white/80 backdrop-blur-xl border-r border-slate-200 flex flex-col z-20"
       >
         <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shadow-sky-200">
-            <Folder className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-sky-100 overflow-hidden border border-slate-100">
+            <img src="/logo.png" alt="CosmoNav Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="font-bold text-slate-800 leading-tight">CosmoNav</h1>
