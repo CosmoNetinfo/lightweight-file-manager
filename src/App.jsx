@@ -104,7 +104,16 @@ export default function FileManager() {
     if (type === 'folder' || type === 'drive') {
       return (
         <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
-          <img src="/folder.png" alt="Folder" className="w-full h-full object-contain mix-blend-multiply filter brightness-100" />
+          <img 
+            src="/folder.png" 
+            alt="Folder" 
+            className={cn(
+              "w-full h-full object-contain transition-all duration-500",
+              isDarkMode 
+                ? "invert hue-rotate-180 mix-blend-screen brightness-125 contrast-125" 
+                : "mix-blend-multiply"
+            )} 
+          />
         </div>
       );
     }
@@ -338,8 +347,18 @@ export default function FileManager() {
         )}
       >
         <div className="p-6 flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-sky-100 overflow-hidden border border-slate-100">
-            <img src="/logo.png" alt="CosmoNav Logo" className="w-full h-full object-cover mix-blend-multiply" />
+          <div className={cn(
+            "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg overflow-hidden border transition-all duration-500",
+            isDarkMode ? "bg-slate-800 border-slate-700 shadow-sky-500/20" : "bg-white border-slate-100 shadow-sky-100"
+          )}>
+            <img 
+              src="/logo.png" 
+              alt="CosmoNav Logo" 
+              className={cn(
+                "w-full h-full object-cover transition-all duration-500",
+                isDarkMode ? "invert hue-rotate-180 mix-blend-screen brightness-125" : "mix-blend-multiply"
+              )} 
+            />
           </div>
           <div>
             <h1 className="font-bold leading-tight">CosmoNav</h1>
