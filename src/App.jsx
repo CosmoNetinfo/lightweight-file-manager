@@ -15,6 +15,114 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+const FolderIcon = ({ colorScheme = 'blue', className }) => {
+  const schemes = {
+    red: { light: '#EC4A58', dark: '#C62828', back: '#B71C1C' },
+    orange: { light: '#F47144', dark: '#E64A19', back: '#BF360C' },
+    yellow: { light: '#F9A726', dark: '#F57F17', back: '#E65100' },
+    green: { light: '#85C440', dark: '#558B2F', back: '#33691E' },
+    teal: { light: '#29B89E', dark: '#00796B', back: '#004D40' },
+    blue: { light: '#4FBBE5', dark: '#1976D2', back: '#0D47A1' },
+    purple: { light: '#A081DB', dark: '#7B1FA2', back: '#4A148C' },
+    pink: { light: '#D769AA', dark: '#AD1457', back: '#880E4F' },
+    gray: { light: '#565E69', dark: '#37474F', back: '#263238' },
+  };
+
+  const scheme = schemes[colorScheme] || schemes.blue;
+
+  return (
+    <svg viewBox="0 0 100 80" className={className} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`folder-grad-${colorScheme}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style={{ stopColor: scheme.light, stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: scheme.dark, stopOpacity: 1 }} />
+        </linearGradient>
+        <filter id="folder-shadow" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" />
+          <feOffset dx="0" dy="1" result="offsetblur" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.3" />
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      {/* Back Wall */}
+      <rect x="5" y="15" width="90" height="60" rx="10" fill={scheme.back} />
+      {/* Inner White Paper */}
+      <rect x="12" y="10" width="76" height="20" rx="4" fill="white" fillOpacity="0.8" />
+      {/* Front Wall with Tab */}
+      <path 
+        d="M5,25 L35,25 C38,25 40,27 42,32 L95,32 L95,75 C95,78 93,80 90,80 L10,80 C7,80 5,78 5,75 Z" 
+        fill={`url(#folder-grad-${colorScheme})`} 
+        filter="url(#folder-shadow)"
+      />
+      {/* Glass Highlight */}
+      <path 
+        d="M10,35 L40,35 C43,35 45,37 47,42 L90,42 L90,45 L10,38 Z" 
+        fill="white" 
+        fillOpacity="0.2"
+      />
+    </svg>
+  );
+};
+
+const FOLDER_COLOR_MAP = {
+  'Utenti': 'yellow',
+  'Programmi': 'purple',
+  'Windows': 'gray',
+  'Desktop': 'red',
+  'Documenti': 'blue',
+  'Download': 'green',
+  'Immagini': 'pink',
+  'Video': 'teal',
+  'Musica': 'orange',
+  'Admin': 'blue',
+  'Pubblica': 'teal',
+};
+
+const getFolderColor = (name) => {
+  return FOLDER_COLOR_MAP[name] || 'blue';
+};
+
+const LogoIcon = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="logo-body-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style={{ stopColor: '#4FBBE5', stopOpacity: 1 }} />
+        <stop offset="100%" style={{ stopColor: '#1976D2', stopOpacity: 1 }} />
+      </linearGradient>
+      <radialGradient id="nebula-bg" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" style={{ stopColor: '#93c5fd', stopOpacity: 0.8 }} />
+        <stop offset="50%" style={{ stopColor: '#1e40af', stopOpacity: 0.6 }} />
+        <stop offset="100%" style={{ stopColor: '#1e1b4b', stopOpacity: 0.9 }} />
+      </radialGradient>
+    </defs>
+    {/* Folder Body */}
+    <rect x="10" y="25" width="80" height="60" rx="12" fill="url(#nebula-bg)" />
+    {/* Nebula / Galaxy effect */}
+    <g transform="translate(50,55) rotate(-30)">
+      <ellipse cx="0" cy="0" rx="25" ry="10" fill="none" stroke="white" strokeWidth="2" strokeOpacity="0.4" />
+      <ellipse cx="0" cy="0" rx="15" ry="6" fill="none" stroke="white" strokeWidth="1" strokeOpacity="0.6" />
+      <circle cx="0" cy="0" r="4" fill="white" className="animate-pulse" />
+    </g>
+    {/* Folder Front Tab */}
+    <path 
+      d="M10,35 L40,35 C43,35 45,37 47,42 L90,42 L90,80 C90,83 88,85 85,85 L15,85 C12,85 10,83 10,80 Z" 
+      fill="url(#logo-body-grad)" 
+      fillOpacity="0.7"
+    />
+    {/* Shine / Highlight */}
+    <path 
+      d="M15,45 L45,45 C48,45 50,47 52,52 L85,52 L85,55 L15,48 Z" 
+      fill="white" 
+      fillOpacity="0.3" 
+    />
+  </svg>
+);
+
 export default function FileManager() {
   const [currentPath, setCurrentPath] = useState('C:\\\\');
   const [viewMode, setViewMode] = useState('grid');
@@ -102,18 +210,14 @@ export default function FileManager() {
 
   const getFileIcon = (name, type) => {
     if (type === 'folder' || type === 'drive') {
+      const color = getFolderColor(name);
       return (
-        <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
-          <img 
-            src="/folder.png" 
-            alt="Folder" 
-            className={cn(
-              "w-full h-full object-contain transition-all duration-500",
-              isDarkMode 
-                ? "invert hue-rotate-180 mix-blend-screen brightness-125 contrast-125" 
-                : "mix-blend-multiply"
-            )} 
-          />
+        <div className="w-12 h-12 flex items-center justify-center">
+          {type === 'drive' ? (
+            <HardDrive className={cn("w-10 h-10 text-slate-400")} />
+          ) : (
+            <FolderIcon colorScheme={color} className="w-full h-full drop-shadow-md" />
+          )}
         </div>
       );
     }
@@ -346,23 +450,19 @@ export default function FileManager() {
           isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white/80 border-slate-200"
         )}
       >
-        <div className="p-6 flex items-center gap-3">
+        <div className="p-6 flex items-center gap-4">
           <div className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg overflow-hidden border transition-all duration-500",
-            isDarkMode ? "bg-slate-800 border-slate-700 shadow-sky-500/20" : "bg-white border-slate-100 shadow-sky-100"
+            "w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-500",
+            isDarkMode ? "bg-slate-800 shadow-sky-500/20" : "bg-white shadow-sky-100"
           )}>
-            <img 
-              src="/logo.png" 
-              alt="CosmoNav Logo" 
-              className={cn(
-                "w-full h-full object-cover transition-all duration-500",
-                isDarkMode ? "invert hue-rotate-180 mix-blend-screen brightness-125" : "mix-blend-multiply"
-              )} 
-            />
+            <LogoIcon className="w-10 h-10" />
           </div>
           <div>
-            <h1 className="font-bold leading-tight">CosmoNav</h1>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Deep Space Explorer</p>
+            <h1 className={cn(
+              "text-2xl font-black tracking-tight leading-none",
+              isDarkMode ? "text-white" : "text-slate-900"
+            )}>CosmoNav</h1>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mt-1">Deep Space Explorer</p>
           </div>
         </div>
 
@@ -371,8 +471,8 @@ export default function FileManager() {
             <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Favoriti</p>
             <div className="space-y-1">
               {[
-                { name: 'Desktop', icon: Home, path: 'C:\\\\Desktop\\\\' },
-                { name: 'Download', icon: Download, path: 'C:\\\\Download\\\\' },
+                { name: 'Desktop', icon: ({ className }) => <FolderIcon colorScheme="red" className={className} />, path: 'C:\\\\Desktop\\\\' },
+                { name: 'Download', icon: ({ className }) => <FolderIcon colorScheme="green" className={className} />, path: 'C:\\\\Download\\\\' },
                 { name: 'Recenti', icon: Clock, path: 'C:\\\\' },
               ].map((item) => (
                 <button
@@ -396,9 +496,9 @@ export default function FileManager() {
             <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Cartelle</p>
             <div className="space-y-1">
               {[
-                { name: 'Documenti', icon: FileText, path: 'C:\\\\Documenti\\\\' },
-                { name: 'Immagini', icon: Image, path: 'C:\\\\Immagini\\\\' },
-                { name: 'Video', icon: Video, path: 'C:\\\\Video\\\\' },
+                { name: 'Documenti', icon: ({ className }) => <FolderIcon colorScheme="blue" className={className} />, path: 'C:\\\\Documenti\\\\' },
+                { name: 'Immagini', icon: ({ className }) => <FolderIcon colorScheme="pink" className={className} />, path: 'C:\\\\Immagini\\\\' },
+                { name: 'Video', icon: ({ className }) => <FolderIcon colorScheme="teal" className={className} />, path: 'C:\\\\Video\\\\' },
               ].map((item) => (
                 <button
                   key={item.name}
