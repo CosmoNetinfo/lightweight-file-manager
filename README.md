@@ -1,176 +1,77 @@
-# 🗂️ Lightweight File Manager
+# 🚀 CosmoNav - Deep Space Explorer v2.0 Professional
 
-Un file manager ultraleggero e performante sviluppato in React come alternativa moderna e veloce a Windows Explorer.
-
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
-<img width="1911" height="911" alt="Screenshot 2026-01-16 054657" src="https://github.com/user-attachments/assets/50cc3112-4a1a-4006-bdcf-5384dd595f51" />
-
-## ✨ Caratteristiche
-
-- **🚀 Ultraleggero**: Interfaccia reattiva e veloce senza appesantimenti
-- **🎨 UI Moderna**: Design pulito e intuitivo ispirato a Windows Explorer
-- **📁 Navigazione Intuitiva**: Avanti/Indietro, navigazione breadcrumb e accesso rapido
-- **🔍 Ricerca Integrata**: Trova rapidamente i tuoi file e cartelle
-- **👁️ Due Modalità di Visualizzazione**: Vista griglia o vista lista dettagliata
-- **🎯 Selezione Multipla**: Seleziona più file con Ctrl+Click
-- **📂 Accesso Rapido**: Collegamenti diretti a Desktop, Documenti, Download, ecc.
-- **🎨 Icone Personalizzate**: Icone distinte per ogni tipo di file (documenti, immagini, video, musica, archivi, codice)
-
-## 🛠️ Tecnologie Utilizzate
-
-- **React 18.2**: Framework UI moderno e performante
-- **Lucide React**: Libreria di icone moderna e leggera
-- **React Scripts**: Toolchain ottimizzata per lo sviluppo
-- **CSS3**: Styling responsive e animazioni fluide
-
-## 📋 Requisiti
-
-- Node.js 14.0 o superiore
-- npm 6.0 o superiore
-
-## 🚀 Installazione
-
-### 1. Clona il repository
-
-```bash
-git clone https://github.com/CosmoNetinfo/lightweight-file-manager.git
-cd lightweight-file-manager
-```
-
-### 2. Installa le dipendenze
-
-```bash
-npm install
-```
-
-### 3. Avvia l'applicazione
-
-```bash
-npm start
-```
-
-L'applicazione si aprirà automaticamente su `http://localhost:3000`
-
-## 📦 Build per Produzione
-
-Per creare una build ottimizzata per la produzione:
-
-```bash
-npm run build
-```
-
-I file ottimizzati saranno generati nella cartella `build/` pronti per il deployment.
-
-## 🎮 Utilizzo
-
-### Navigazione Base
-
-- **Doppio click** su una cartella per aprirla
-- **Click singolo** per selezionare un file/cartella
-- **Ctrl + Click** per selezione multipla
-- **Pulsanti Avanti/Indietro** per navigare nella cronologia
-
-### Barra degli Strumenti
-
-| Icona | Funzione |
-|-------|----------|
-| ⬅️ ➡️ | Navigazione cronologia |
-| 📁 | Torna alla cartella superiore |
-| 🔄 | Aggiorna vista corrente |
-| ➕📄 | Crea nuovo file |
-| ➕📁 | Crea nuova cartella |
-| 📋 | Copia elementi selezionati |
-| ✂️ | Taglia elementi selezionati |
-| 🗑️ | Elimina elementi selezionati |
-| ⊞ ☰ | Cambia modalità di visualizzazione |
-
-### Accesso Rapido
-
-La sidebar laterale offre collegamenti rapidi a:
-- 🏠 Desktop
-- 📄 Documenti
-- ⬇️ Download
-- 🖼️ Immagini
-- 🎬 Video
-- 🎵 Musica
-- 💾 Disco locale (C:)
-
-## 🎨 Tipi di File Supportati
-
-Il file manager riconosce e mostra icone personalizzate per:
-
-- **Documenti**: .txt, .doc, .docx, .pdf
-- **Immagini**: .jpg, .jpeg, .png, .gif, .bmp
-- **Video**: .mp4, .avi, .mkv, .mov
-- **Musica**: .mp3, .wav, .flac
-- **Archivi**: .zip, .rar, .7z
-- **Codice**: .js, .py, .java, .cpp, .html, .css
-
-## 🔧 Personalizzazione
-
-### Aggiungere Nuove Cartelle
-
-Modifica l'oggetto `fileSystem` in `src/App.jsx`:
-
-```javascript
-const fileSystem = {
-  'C:\\NuovaCartella': {
-    type: 'folder',
-    children: ['file1.txt', 'file2.jpg']
-  }
-};
-```
-
-### Aggiungere Nuovi Tipi di File
-
-Estendi la funzione `getFileIcon()` in `src/App.jsx`:
-
-```javascript
-if (['nuova', 'estensione'].includes(ext)) {
-  return <TuaIcona className="w-8 h-8 text-colore" />;
-}
-```
-
-## 📝 Roadmap
-
-- [ ] Integrazione con file system reale (Electron)
-- [ ] Operazioni CRUD complete (copia, sposta, elimina)
-- [ ] Anteprima file (immagini, documenti)
-- [ ] Supporto drag & drop
-- [ ] Temi personalizzabili (dark mode)
-- [ ] Compressione/estrazione archivi
-- [ ] Sincronizzazione cloud
-- [ ] Gestione permessi file
-
-## 🤝 Contribuire
-
-I contributi sono benvenuti! Per contribuire:
-
-1. Fai il fork del progetto
-2. Crea un branch per la tua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit le tue modifiche (`git commit -m 'Add some AmazingFeature'`)
-4. Push sul branch (`git push origin feature/AmazingFeature`)
-5. Apri una Pull Request
-
-## 📄 Licenza
-
-Questo progetto è rilasciato sotto licenza MIT. Vedi il file [LICENSE](LICENSE) per i dettagli.
-
-## 👤 Autore
-
-**CosmoNet**
-
-- Website: [www.cosmonet.info](https://www.cosmonet.info)
-- GitHub: [@CosmoNetinfo](https://github.com/CosmoNetinfo)
-
-## 🙏 Ringraziamenti
-
-- [Lucide Icons](https://lucide.dev/) per le icone bellissime
-- [React](https://react.dev/) per il framework UI
-- La community open source per l'ispirazione
+> **L'alternativa definitiva a Windows Explorer: più veloce, più intelligente, infinitamente più bello.**  
+> Progettato per chi esige prestazioni estreme e un'estetica futuristica.
 
 ---
 
-⭐ Se questo progetto ti è stato utile, lascia una stella su GitHub!
+## ✨ Perché scegliere CosmoNav?
+
+CosmoNav non è solo un semplice gestore di file; è una plancia di comando progettata per massimizzare la tua produttività spaziale. La versione 2.0 introduce funzionalità rivoluzionarie racchiuse in un design **Deep Space Professional**.
+
+### 🎨 Estetica d'Avanguardia
+- **Pro-Glass Interface**: Un mix perfetto di glassmorphism, gradienti neon e animazioni fluide a 60fps.
+- **Dynamic Design**: Ogni interazione è studiata per offrire feedback visivo immediato e gratificante.
+- **Responsive Workspace**: Scegli tra la vista a griglia compatta o la lista tecnica con colonne personalizzabili.
+
+### ⚡ Produttività Senza Limiti
+- **📑 Tab System Avanzato**: Gestisci decine di percorsi contemporaneamente senza affollare la barra delle applicazioni.
+- **👁️ Quick Preview Total**: Il tasto `Spacebar` è il tuo miglior alleato. Anteprime istantanee di immagini e video senza aprire app esterne.
+- **📋 Clipboard Intelligence**: Dimentica i limiti del copia-incolla standard. Monitora e gestisci la tua flotta di dati con indicatori di stato dedicati.
+- **🔖 Smart Bookmarks**: I tuoi percorsi più cliccati sono sempre a portata di mano in una sidebar elegante.
+
+### �️ Strumenti di Precisione
+- **Bulk Rename Pro**: Rinomina migliaia di file in frazioni di secondo con pattern dinamici.
+- **Folder Analytics**: Una dashboard completa (`Ctrl+I`) per analizzare lo spazio occupato con grafici interattivi.
+- **Advanced Filters**: Trova l'ago nel pagliaio filtrando istantaneamente per tipologia, dimensione e data.
+- **Native Compression**: Archiviazione ZIP integrata con massima ottimizzazione.
+
+---
+
+## ⌨️ Comandi Rapidi (Power User)
+
+| Azione | Tasto |
+|--------|-------|
+| **Quick Preview** | `Spacebar` |
+| **Nuovo Tab** | `Ctrl + T` |
+| **Chiudi Tab** | `Ctrl + W` |
+| **Bookmark** | `Ctrl + B` |
+| **Bulk Rename** | `Ctrl + R` |
+| **Analisi Spazio** | `Ctrl + I` |
+| **Dual Pane** | `Ctrl + D` |
+| **Copia / Taglia / Incolla** | `Ctrl + C / X / V` |
+| **Rinomina Singola** | `F2` |
+
+---
+
+## 🚀 Download & Installazione
+
+### [📥 Scarica CosmoNav 2.0.0 (Portable)](https://www.cosmonet.info/cosmonav-download)
+*Nessuna installazione richiesta. Copia su una chiavetta e portalo sempre con te.*
+
+### [📦 Scarica CosmoNav Setup (Installer)](https://www.cosmonet.info/cosmonav-setup)
+*L'esperienza completa con integrazione di sistema e aggiornamenti rapidi.*
+
+---
+
+## ⚛️ Architettura Tecnica
+Costruito per la massima stabilità e velocità:
+- **Core**: Electron Framework
+- **Engine**: React 18 & Node.js
+- **Styling**: Tailwind CSS & Modern Glassmorphism
+- **Animations**: Framer Motion Engine
+
+---
+
+## 📝 Roadmap v2.x
+- [ ] Drag & Drop tra pannelli Dual Pane
+- [ ] Integrazione Cloud (Google Drive, OneDrive)
+- [ ] Terminale GPU-accelerated integrato
+- [ ] Supporto nativo Git / GitKraken
+
+---
+
+<p align="center">
+  Sviluppato con passione per l'esplorazione digitale dal <b>Team CosmoNet</b><br>
+  © 2026 CosmoNav Professional - Tutti i diritti riservati.
+</p>

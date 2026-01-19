@@ -4,15 +4,71 @@ import {
   Archive, Code, ChevronRight, ChevronLeft, Search, Grid, List, 
   Download, Trash2, FolderPlus, FilePlus, Copy, RefreshCw, Scissors,
   Star, Clock, Settings, MoreVertical, X, Info, UploadCloud,
-  Moon, Sun, Edit3, Share2, ExternalLink
+  Moon, Sun, Edit3, Share2, ExternalLink, Rocket, Plus, Eye, Tag,
+  Filter, BarChart3, Bookmark, SplitSquareHorizontal, Maximize2,
+  FileArchive, Palette, Zap, Check, Columns, FolderOpen, Split
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { QuickPreviewModal, FolderStatsModal, BulkRenameModal } from './Modals';
 
-// Utility for tailwind classes
+const fs = window.require('fs');
+const path = window.require('path');
+const os = window.require('os');
+const { shell, ipcRenderer } = window.require('electron');
+const { execSync } = window.require('child_process');
+const archiver = window.require('archiver');
+
+const HOME_DIR = os.homedir();
+
 function cn(...inputs) {
   return twMerge(clsx(inputs));
+}
+
+// Utility per debouncing (ottimizzazione ricerca)
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+// Tag colors disponibili
+const TAG_COLORS = [
+  { name: 'Rosso', value: 'red', bg: 'bg-red-500/20', text: 'text-red-500', border: 'border-red-500/50' },
+  { name: 'Arancione', value: 'orange', bg: 'bg-orange-500/20', text: 'text-orange-500', border: 'border-orange-500/50' },
+  { name: 'Giallo', value: 'yellow', bg: 'bg-yellow-500/20', text: 'text-yellow-500', border: 'border-yellow-500/50' },
+  { name: 'Verde', value: 'green', bg: 'bg-green-500/20', text: 'text-green-500', border: 'border-green-500/50' },
+  { name: 'Blu', value: 'blue', bg: 'bg-blue-500/20', text: 'text-blue-500', border: 'border-blue-500/50' },
+  { name: 'Viola', value: 'purple', bg: 'bg-purple-500/20', text: 'text-purple-500', border: 'border-purple-500/50' },
+  { name: 'Rosa', value: 'pink', bg: 'bg-pink-500/20', text: 'text-pink-500', border: 'border-pink-500/50' },
+];
+
+// Componente per catturare errori catastrofici
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-10 font-sans">
+          <h1 className="text-4xl font-black text-rose-500 mb-4">CosmoNav si è fermato</h1>
+          <p className="text-slate-400 mb-6 text-center">Si è verificato un errore durante l'inizializzazione del sistema.</p>
+          <pre className="bg-slate-900 p-4 rounded-xl border border-slate-800 text-xs text-rose-300 w-full overflow-auto max-h-60">
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3 bg-sky-500 rounded-full font-bold">Riavvia Sistema</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 const FolderIcon = ({ colorScheme = 'blue', className }) => {
@@ -84,8 +140,40 @@ const FOLDER_COLOR_MAP = {
 };
 
 const getFolderColor = (name) => {
+  if (!name) return 'blue';
   return FOLDER_COLOR_MAP[name] || 'blue';
 };
+
+const DriveIcon = ({ className }) => (
+  <svg viewBox="0 0 100 80" className={className} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="drive-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style={{ stopColor: '#64748b', stopOpacity: 1 }} />
+        <stop offset="100%" style={{ stopColor: '#334155', stopOpacity: 1 }} />
+      </linearGradient>
+      <linearGradient id="drive-led-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style={{ stopColor: '#38bdf8', stopOpacity: 1 }} />
+        <stop offset="100%" style={{ stopColor: '#22d3ee', stopOpacity: 1 }} />
+      </linearGradient>
+      <filter id="drive-shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" />
+        <feOffset dx="0" dy="1" result="offsetblur" />
+        <feMerge>
+          <feMergeNode in="offsetblur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    {/* Body - Case Metallic */}
+    <rect x="10" y="20" width="80" height="40" rx="6" fill="url(#drive-grad)" filter="url(#drive-shadow)" />
+    {/* Detail Line */}
+    <rect x="15" y="38" width="70" height="1" fill="#1e293b" fillOpacity="0.5" />
+    {/* LED Light Pulse */}
+    <rect x="78" y="48" width="6" height="2" rx="1" fill="url(#drive-led-grad)" className="animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+    {/* Glass Reflection Top */}
+    <path d="M10,26 L90,26 L90,32 L10,36 Z" fill="white" fillOpacity="0.1" />
+  </svg>
+);
 
 const LogoIcon = ({ className }) => (
   <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -123,68 +211,558 @@ const LogoIcon = ({ className }) => (
   </svg>
 );
 
-export default function FileManager() {
-  const [currentPath, setCurrentPath] = useState('C:\\\\');
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <FileManager />
+    </ErrorBoundary>
+  );
+}
+
+const formatDate = (date) => {
+  if (!date) return '';
+  try {
+    return new Date(date).toLocaleString('it-IT', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (e) {
+    return '';
+  }
+};
+
+function FileManager() {
+  // Stati base
+  const [currentPath, setCurrentPath] = useState('HOME');
   const [viewMode, setViewMode] = useState('grid');
   const [selectedItems, setSelectedItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [history, setHistory] = useState(['C:\\\\']);
+  const [history, setHistory] = useState(['HOME']);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [contextMenu, setContextMenu] = useState(null);
   const [dragOverItem, setDragOverItem] = useState(null);
   const [isExternalDragOver, setIsExternalDragOver] = useState(false);
   const [selectionBox, setSelectionBox] = useState(null);
   const containerRef = useRef(null);
+  const [currentItems, setCurrentItems] = useState([]);
+  const [systemPaths, setSystemPaths] = useState({});
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Initial Mock File System
-  const initialFileSystem = {
-    'C:\\\\': {
-      type: 'drive',
-      children: [
-        { name: 'Utenti', type: 'folder', size: '--', date: '12/01/2026' },
-        { name: 'Programmi', type: 'folder', size: '--', date: '10/01/2026' },
-        { name: 'Windows', type: 'folder', size: '--', date: '05/01/2026' },
-        { name: 'Desktop', type: 'folder', size: '--', date: '15/01/2026' },
-        { name: 'Documenti', type: 'folder', size: '--', date: '14/01/2026' },
-        { name: 'Download', type: 'folder', size: '--', date: '16/01/2026' },
-        { name: 'Immagini', type: 'folder', size: '--', date: '13/01/2026' },
-        { name: 'Video', type: 'folder', size: '--', date: '11/01/2026' },
-        { name: 'Musica', type: 'folder', size: '--', date: '09/01/2026' }
-      ]
-    },
-    'C:\\\\Utenti\\\\': {
-      type: 'folder',
-      children: [
-        { name: 'Admin', type: 'folder', size: '--', date: '16/01/2026' },
-        { name: 'Pubblica', type: 'folder', size: '--', date: '01/01/2026' }
-      ]
-    },
-    'C:\\\\Documenti\\\\': {
-      type: 'folder',
-      children: [
-        { name: 'Progetto_Finale.pdf', type: 'file', size: '2.4 MB', date: '15/01/2026' },
-        { name: 'Bilancio_2025.xlsx', type: 'file', size: '1.1 MB', date: '14/01/2026' },
-        { name: 'Note_Meeting.txt', type: 'file', size: '45 KB', date: '16/01/2026' },
-        { name: 'Presentazione.pptx', type: 'file', size: '12.8 MB', date: '13/01/2026' }
-      ]
-    },
-    'C:\\\\Immagini\\\\': {
-      type: 'folder',
-      children: [
-        { name: 'Vacanze_2025.jpg', type: 'file', size: '4.2 MB', date: '10/01/2026', preview: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80' },
-        { name: 'Logo_Aziendale.png', type: 'file', size: '850 KB', date: '12/01/2026', preview: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=800&q=80' },
-        { name: 'Skyline.jpg', type: 'file', size: '3.1 MB', date: '14/01/2026', preview: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80' }
-      ]
+  // ✨ NUOVE FEATURES
+  // Tabs multipli
+  const [tabs, setTabs] = useState([{ id: 1, path: 'HOME', name: 'Questo PC' }]);
+  const [activeTabId, setActiveTabId] = useState(1);
+  const [nextTabId, setNextTabId] = useState(2);
+
+  // Dual Pane
+  const [isDualPane, setIsDualPane] = useState(false);
+  const [leftPane, setLeftPane] = useState({ path: 'HOME', items: [], selectedItems: [] });
+  const [rightPane, setRightPane] = useState({ path: 'HOME', items: [], selectedItems: [] });
+  const [activePane, setActivePane] = useState('left');
+
+  // Quick Preview
+  const [previewItem, setPreviewItem] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Clipboard Manager
+  const [clipboard, setClipboard] = useState({ items: [], operation: null }); // operation: 'copy' | 'cut'
+
+  // Bookmarks
+  const [bookmarks, setBookmarks] = useState([]);
+
+  // File Tags
+  const [fileTags, setFileTags] = useState({}); // { fullPath: { tags: ['tag1'], color: 'red' } }
+  const [showTagModal, setShowTagModal] = useState(false);
+
+  // Bulk Rename
+  const [showBulkRename, setShowBulkRename] = useState(false);
+  const [bulkRenamePattern, setBulkRenamePattern] = useState('');
+
+  // Statistiche
+  const [showStats, setShowStats] = useState(false);
+  const [folderStats, setFolderStats] = useState(null);
+
+  // Filtri avanzati
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    type: 'all', // all, folder, image, video, document, code, music, archive
+    sizeMin: 0,
+    sizeMax: Infinity,
+    dateFrom: null,
+    dateFrom: null,
+    dateTo: null
+  });
+
+  // 💾 Info Drives per Footer
+  const [drives, setDrives] = useState([]);
+
+  // 📏 Resizable Columns
+  const [columnWidths, setColumnWidths] = useState({ name: 400, date: 180, type: 120, size: 120 });
+  const resizingRef = useRef(null); // { col: 'name', startX: 0, startWidth: 0 }
+
+  const startResizing = useCallback((e, col) => {
+    e.preventDefault();
+    resizingRef.current = {
+      col,
+      startX: e.clientX,
+      startWidth: columnWidths[col]
+    };
+    document.body.style.cursor = 'col-resize';
+  }, [columnWidths]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!resizingRef.current) return;
+      
+      const { col, startX, startWidth } = resizingRef.current;
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(50, startWidth + diff); // Minimo 50px
+      
+      setColumnWidths(prev => ({
+        ...prev,
+        [col]: newWidth
+      }));
+    };
+
+    const handleMouseUp = () => {
+      if (resizingRef.current) {
+        resizingRef.current = null;
+        document.body.style.cursor = '';
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  // Debounced search per performance
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Recupera i percorsi nativi dal processo Main
+  useEffect(() => {
+    const fetchPaths = async () => {
+      try {
+        const paths = await ipcRenderer.invoke('get-system-paths');
+        setSystemPaths(paths);
+      } catch (e) {
+        console.error("Errore recupero percorsi native:", e);
+      }
+    };
+    fetchPaths();
+  }, []);
+
+  // Funzione per ottenere i dischi su Windows
+  const getDrives = useCallback(() => {
+    try {
+      const stdout = execSync('wmic logicaldisk get name,volumename,size,freespace /format:csv').toString();
+      const rows = stdout.split(/\r?\n/).filter(line => line.trim() !== '' && !line.includes('Node'));
+      
+      const drivesList = rows.map(line => {
+        const cols = line.split(',');
+        if (cols.length < 5) return null;
+        
+        const driveName = cols[2]?.trim();
+        if (!driveName) return null;
+
+        const totalBytes = parseInt(cols[3]) || 0; // Fix: Size è colonna 3, non 4
+        const freeBytes = parseInt(cols[1]) || 0;
+        const usedBytes = totalBytes - freeBytes;
+        const label = cols[5]?.trim() || 'Disco Locale';
+        
+        const usedPercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
+        
+        return {
+          name: `${label} (${driveName})`,
+          shortName: driveName,
+          type: 'drive',
+          totalSize: totalBytes > 0 ? (totalBytes / (1024 ** 3)).toFixed(0) + ' GB' : '--',
+          freeSize: freeBytes > 0 ? (freeBytes / (1024 ** 3)).toFixed(1).replace('.', ',') + ' GB' : '--',
+          usedPercent: Math.round(usedPercent),
+          fullPath: driveName + '\\'
+        };
+      }).filter(Boolean);
+
+      return drivesList.length > 0 ? drivesList : [{ name: 'Disco Locale (C:)', shortName: 'C:', type: 'drive', totalSize: '--', freeSize: '--', usedPercent: 0, fullPath: 'C:\\' }];
+    } catch (e) {
+      return [{ name: 'Disco Locale (C:)', shortName: 'C:', type: 'drive', totalSize: '--', freeSize: '--', usedPercent: 0, fullPath: 'C:\\' }];
     }
-  };
+  }, []);
 
-  const [fileSystem, setFileSystem] = useState(initialFileSystem);
+  const loadDirectory = useCallback((dirPath) => {
+    if (!dirPath || dirPath === 'HOME') {
+      setCurrentItems(getDrives());
+      return;
+    }
+
+    try {
+      if (!fs.existsSync(dirPath)) {
+        setCurrentPath('HOME');
+        return;
+      }
+      
+      const files = fs.readdirSync(dirPath);
+      const items = files.map(file => {
+        try {
+          const fullPath = path.join(dirPath, file);
+          const stats = fs.statSync(fullPath);
+          const isDir = stats.isDirectory();
+          const ext = file.split('.').pop().toLowerCase();
+          
+          let preview = null;
+          if (!isDir && ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+            // In Electron con contextIsolation: false e nodeIntegration: true
+            // possiamo usare il percorso file diretto (anche se non sempre ideale per sicurezza)
+            preview = `file:///${fullPath.replace(/\\/g, '/')}`;
+          }
+
+          return {
+            name: file,
+            type: isDir ? 'folder' : 'file',
+            size: isDir ? '--' : (stats.size / 1024 / 1024).toFixed(1) + ' MB',
+            rawSize: stats.size,
+            date: stats.mtime.toLocaleDateString('it-IT'),
+            lastModified: stats.mtime,
+            fullPath: fullPath,
+            preview: preview,
+            ext: ext
+          };
+        } catch (e) { return null; }
+      }).filter(Boolean);
+      setCurrentItems(items);
+    } catch (error) {
+      setCurrentPath('HOME');
+    }
+  }, [getDrives]);
+
+  useEffect(() => {
+    loadDirectory(currentPath);
+  }, [currentPath, loadDirectory]);
+
+  // ========== NUOVE FUNZIONI UTILITY ==========
+  
+  // 📑 Gestione Tabs
+  const createNewTab = useCallback((tabPath = 'HOME', tabName = null) => {
+    const newTab = {
+      id: nextTabId,
+      path: tabPath,
+      name: tabName || (tabPath === 'HOME' ? 'Questo PC' : tabPath.split(path.sep).filter(Boolean).pop())
+    };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabId(nextTabId);
+    setNextTabId(prev => prev + 1);
+    setCurrentPath(tabPath);
+  }, [nextTabId]);
+
+  const closeTab = useCallback((tabId) => {
+    setTabs(prev => {
+      const newTabs = prev.filter(t => t.id !== tabId);
+      if (newTabs.length === 0) {
+        return [{ id: nextTabId, path: 'HOME', name: 'Questo PC' }];
+      }
+      if (activeTabId === tabId && newTabs.length > 0) {
+        setActiveTabId(newTabs[newTabs.length - 1].id);
+        setCurrentPath(newTabs[newTabs.length - 1].path);
+      }
+      return newTabs;
+    });
+  }, [activeTabId, nextTabId]);
+
+  const switchTab = useCallback((tabId) => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab) {
+      setActiveTabId(tabId);
+      setCurrentPath(tab.path);
+    }
+  }, [tabs]);
+
+  // 🔖 Gestione Bookmarks
+  const addBookmark = useCallback((itemPath, itemName) => {
+    setBookmarks(prev => {
+      if (prev.some(b => b.path === itemPath)) return prev;
+      return [...prev, { path: itemPath, name: itemName || itemPath.split(path.sep).filter(Boolean).pop() }];
+    });
+  }, []);
+
+  const removeBookmark = useCallback((itemPath) => {
+    setBookmarks(prev => prev.filter(b => b.path !== itemPath));
+  }, []);
+
+  // 📋 Clipboard Manager
+  const copyToClipboard = useCallback(() => {
+    setClipboard({ items: selectedItems, operation: 'copy' });
+  }, [selectedItems]);
+
+  const cutToClipboard = useCallback(() => {
+    setClipboard({ items: selectedItems, operation: 'cut' });
+  }, [selectedItems]);
+
+  const pasteFromClipboard = useCallback(async () => {
+    if (clipboard.items.length === 0 || currentPath === 'HOME') return;
+    
+    try {
+      for (const item of clipboard.items) {
+        const destPath = path.join(currentPath, item.name);
+        
+        if (clipboard.operation === 'copy') {
+          if (item.type === 'folder') {
+            fs.cpSync(item.fullPath, destPath, { recursive: true });
+          } else {
+            fs.copyFileSync(item.fullPath, destPath);
+          }
+        } else if (clipboard.operation === 'cut') {
+          try {
+            fs.renameSync(item.fullPath, destPath);
+          } catch (err) {
+            if (err.code === 'EXDEV') {
+              // Fallback per spostamenti tra partizioni diverse
+              if (item.type === 'folder') {
+                fs.cpSync(item.fullPath, destPath, { recursive: true });
+                fs.rmSync(item.fullPath, { recursive: true });
+              } else {
+                fs.copyFileSync(item.fullPath, destPath);
+                fs.unlinkSync(item.fullPath);
+              }
+            } else {
+              throw err;
+            }
+          }
+        }
+      }
+      
+      if (clipboard.operation === 'cut') {
+        setClipboard({ items: [], operation: null });
+      }
+      
+      loadDirectory(currentPath);
+    } catch (e) {
+      console.error('Errore paste:', e);
+      alert('Errore durante l\'incolla: ' + e.message);
+    }
+  }, [clipboard, currentPath, loadDirectory]);
+
+  // 💾 Compressione ZIP
+  const compressFiles = useCallback(async () => {
+    if (selectedItems.length === 0) return;
+    
+    try {
+      const zipName = `Archive_${Date.now()}.zip`;
+      const zipPath = path.join(currentPath, zipName);
+      const output = fs.createWriteStream(zipPath);
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      
+      output.on('close', () => {
+        loadDirectory(currentPath);
+        setSelectedItems([]);
+      });
+      
+      archive.pipe(output);
+      
+      for (const item of selectedItems) {
+        if (item.type === 'folder') {
+          archive.directory(item.fullPath, item.name);
+        } else {
+          archive.file(item.fullPath, { name: item.name });
+        }
+      }
+      
+      await archive.finalize();
+    } catch (e) {
+      console.error('Errore compressione:', e);
+    }
+  }, [selectedItems, currentPath, loadDirectory]);
+
+  // 📊 Calcolo Statistiche Cartella
+  const calculateFolderStats = useCallback((dirPath) => {
+    if (!dirPath || dirPath === 'HOME') return null;
+    
+    try {
+      const stats = {
+        totalFiles: 0,
+        totalFolders: 0,
+        totalSize: 0,
+        byType: {
+          images: { count: 0, size: 0 },
+          videos: { count: 0, size: 0 },
+          documents: { count: 0, size: 0 },
+          music: { count: 0, size: 0 },
+          archives: { count: 0, size: 0 },
+          code: { count: 0, size: 0 },
+          others: { count: 0, size: 0 }
+        }
+      };
+
+      const scanDir = (dir) => {
+        try {
+          const files = fs.readdirSync(dir);
+          files.forEach(file => {
+            try {
+              const fullPath = path.join(dir, file);
+              const fileStat = fs.statSync(fullPath);
+              
+              if (fileStat.isDirectory()) {
+                stats.totalFolders++;
+                scanDir(fullPath);
+              } else {
+                stats.totalFiles++;
+                stats.totalSize += fileStat.size;
+                
+                const ext = file.split('.').pop().toLowerCase();
+                if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+                  stats.byType.images.count++;
+                  stats.byType.images.size += fileStat.size;
+                } else if (['mp4', 'avi', 'mov', 'mkv'].includes(ext)) {
+                  stats.byType.videos.count++;
+                  stats.byType.videos.size += fileStat.size;
+                } else if (['pdf', 'doc', 'docx', 'xlsx', 'txt'].includes(ext)) {
+                  stats.byType.documents.count++;
+                  stats.byType.documents.size += fileStat.size;
+                } else if (['mp3', 'wav', 'flac'].includes(ext)) {
+                  stats.byType.music.count++;
+                  stats.byType.music.size += fileStat.size;
+                } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+                  stats.byType.archives.count++;
+                  stats.byType.archives.size += fileStat.size;
+                } else if (['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'py', 'json'].includes(ext)) {
+                  stats.byType.code.count++;
+                  stats.byType.code.size += fileStat.size;
+                } else {
+                  stats.byType.others.count++;
+                  stats.byType.others.size += fileStat.size;
+                }
+              }
+            } catch (e) { /* Skip inaccessible files */ }
+          });
+        } catch (e) { /* Skip inaccessible dirs */ }
+      };
+
+      scanDir(dirPath);
+      return stats;
+    } catch (e) {
+      console.error('Errore calcolo stats:', e);
+      return null;
+    }
+  }, []);
+
+  // 📝 Bulk Rename
+  const applyBulkRename = useCallback(() => {
+    if (!bulkRenamePattern || selectedItems.length === 0) return;
+    
+    try {
+      selectedItems.forEach((item, index) => {
+        const ext = item.type === 'file' ? '.' + item.name.split('.').pop() : '';
+        const newName = bulkRenamePattern
+          .replace('{n}', (index + 1).toString())
+          .replace('{name}', item.name.replace(ext, ''))
+          .replace('{date}', new Date().toISOString().split('T')[0]) + ext;
+        
+        const newPath = path.join(currentPath, newName);
+        fs.renameSync(item.fullPath, newPath);
+      });
+      
+      loadDirectory(currentPath);
+      setSelectedItems([]);
+      setShowBulkRename(false);
+      setBulkRenamePattern('');
+    } catch (e) {
+      console.error('Errore bulk rename:', e);
+    }
+  }, [bulkRenamePattern, selectedItems, currentPath, loadDirectory]);
+
+  // 🎨 Tag Management
+  const addTagToItem = useCallback((item, tag, color) => {
+    setFileTags(prev => ({
+      ...prev,
+      [item.fullPath]: {
+        tags: [...(prev[item.fullPath]?.tags || []), tag],
+        color: color || prev[item.fullPath]?.color || 'blue'
+      }
+    }));
+  }, []);
+
+  const setItemColor = useCallback((item, color) => {
+    setFileTags(prev => ({
+      ...prev,
+      [item.fullPath]: {
+        ...prev[item.fullPath],
+        color: color
+      }
+    }));
+  }, []);
 
   // Keyboard Shortcuts
+
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Quick Preview con Spacebar
+      if (e.key === ' ' && selectedItems.length === 1 && !e.target.matches('input, textarea')) {
+        e.preventDefault();
+        setPreviewItem(selectedItems[0]);
+        setShowPreview(true);
+      }
+
+      // Nuovo Tab - Ctrl+T
+      if (e.ctrlKey && e.key === 't') {
+        e.preventDefault();
+        createNewTab();
+      }
+
+      // Chiudi Tab - Ctrl+W
+      if (e.ctrlKey && e.key === 'w' && tabs.length > 1) {
+        e.preventDefault();
+        closeTab(activeTabId);
+      }
+
+      // Clipboard - Ctrl+C/X/V
+      if (e.ctrlKey && e.key === 'c' && selectedItems.length > 0 && !e.target.matches('input, textarea')) {
+        e.preventDefault();
+        copyToClipboard();
+      }
+      if (e.ctrlKey && e.key === 'x' && selectedItems.length > 0 && !e.target.matches('input, textarea')) {
+        e.preventDefault();
+        cutToClipboard();
+      }
+      if (e.ctrlKey && e.key === 'v' && clipboard.items.length > 0 && !e.target.matches('input, textarea')) {
+        e.preventDefault();
+        pasteFromClipboard();
+      }
+
+      // Dual Pane - Ctrl+D
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        setIsDualPane(!isDualPane);
+      }
+
+      // Bookmark - Ctrl+B
+      if (e.ctrlKey && e.key === 'b' && currentPath !== 'HOME') {
+        e.preventDefault();
+        addBookmark(currentPath);
+      }
+
+      // Bulk Rename - Ctrl+R
+      if (e.ctrlKey && e.key === 'r' && selectedItems.length > 1) {
+        e.preventDefault();
+        setShowBulkRename(true);
+      }
+
+      // Statistiche - Ctrl+I
+      if (e.ctrlKey && e.key === 'i' && currentPath !== 'HOME') {
+        e.preventDefault();
+        const stats = calculateFolderStats(currentPath);
+        setFolderStats(stats);
+        setShowStats(true);
+      }
+
+      // Azioni su item selezionati
       if (selectedItems.length > 0) {
         if (e.key === 'Enter') {
           handleItemClick(selectedItems[0]);
@@ -192,14 +770,45 @@ export default function FileManager() {
         if (e.key === 'Delete') {
           handleDeleteItems();
         }
+        // F2 per rinominare
+        if (e.key === 'F2' && selectedItems.length === 1) {
+          e.preventDefault();
+          const newName = prompt('Nuovo nome:', selectedItems[0].name);
+          if (newName && newName !== selectedItems[0].name) {
+            try {
+              const newPath = path.join(currentPath, newName);
+              fs.renameSync(selectedItems[0].fullPath, newPath);
+              loadDirectory(currentPath);
+              setSelectedItems([]);
+            } catch (error) {
+              alert('Errore nella rinomina: ' + error.message);
+            }
+          }
+        }
       }
-      if (e.key === 'Backspace' && historyIndex > 0) {
-        goBack();
+      
+      // Chiudi Modali con ESC
+      if (e.key === 'Escape') {
+        if (showPreview) setShowPreview(false);
+        if (showStats) setShowStats(false);
+        if (showBulkRename) setShowBulkRename(false);
+        if (showSettings) setShowSettings(false);
+      }
+
+      // Naviga indietro
+      if (e.key === 'Backspace') {
+        // Evita navigazione se stiamo scrivendo in un input
+        if (e.target.matches('input, textarea') || e.target.isContentEditable) return;
+        
+        if (historyIndex > 0) {
+          e.preventDefault();
+          goBack();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItems, historyIndex]);
+  }, [selectedItems, historyIndex, showPreview, clipboard, isDualPane, tabs, activeTabId, currentPath, createNewTab, closeTab, copyToClipboard, cutToClipboard, pasteFromClipboard, addBookmark, calculateFolderStats, loadDirectory]);
 
   // Close context menu on click elsewhere
   useEffect(() => {
@@ -208,13 +817,13 @@ export default function FileManager() {
     return () => window.removeEventListener('click', handleClick);
   }, []);
 
-  const getFileIcon = (name, type) => {
+  const getFileIcon = (name, type, preview, item) => {
     if (type === 'folder' || type === 'drive') {
       const color = getFolderColor(name);
       return (
-        <div className="w-12 h-12 flex items-center justify-center">
+        <div className="w-10 h-10 flex items-center justify-center">
           {type === 'drive' ? (
-            <HardDrive className={cn("w-10 h-10 text-slate-400")} />
+            <DriveIcon className="w-full h-full drop-shadow-md" />
           ) : (
             <FolderIcon colorScheme={color} className="w-full h-full drop-shadow-md" />
           )}
@@ -223,9 +832,26 @@ export default function FileManager() {
     }
     
     const ext = name.split('.').pop().toLowerCase();
-    const baseClass = "w-10 h-10";
+    const baseClass = "w-8 h-8";
     
-    if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(ext)) return <Image className={cn(baseClass, "text-rose-500")} />;
+    // Mostra miniatura per immagini
+    if (preview && ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+      return (
+        <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-700/50 shadow-md">
+          <img 
+            src={preview} 
+            alt={name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.parentElement.innerHTML = '<svg className="w-8 h-8 text-rose-500">fallback</svg>';
+            }}
+          />
+        </div>
+      );
+    }
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) return <Image className={cn(baseClass, "text-rose-500")} />;
     if (['mp4', 'avi', 'mov'].includes(ext)) return <Video className={cn(baseClass, "text-purple-500")} />;
     if (['mp3', 'wav'].includes(ext)) return <Music className={cn(baseClass, "text-pink-500")} />;
     if (['zip', 'rar', '7z'].includes(ext)) return <Archive className={cn(baseClass, "text-orange-500")} />;
@@ -235,31 +861,83 @@ export default function FileManager() {
     return <File className={cn(baseClass, "text-slate-400")} />;
   };
 
-  const currentItems = useMemo(() => {
-    const current = fileSystem[currentPath] || { children: [] };
-    const query = searchQuery.toLowerCase();
-    return query 
-      ? current.children.filter(item => item.name.toLowerCase().includes(query))
-      : current.children;
-  }, [currentPath, searchQuery, fileSystem]);
+  const filteredItems = useMemo(() => {
+    let items = currentItems;
 
-  const navigateTo = useCallback((path) => {
-    if (fileSystem[path] || path === 'C:\\\\') {
-      setCurrentPath(path);
-      setHistory(prev => {
-        const newHistory = prev.slice(0, historyIndex + 1);
-        newHistory.push(path);
-        return newHistory;
-      });
-      setHistoryIndex(prev => prev + 1);
-      setSelectedItems([]);
+    // Filtro ricerca (debounced)
+    if (debouncedSearch) {
+      const query = debouncedSearch.toLowerCase();
+      items = items.filter(item => item.name.toLowerCase().includes(query));
     }
-  }, [fileSystem, historyIndex]);
+
+    // Filtro per tipo
+    if (filters.type !== 'all') {
+      items = items.filter(item => {
+        if (filters.type === 'folder') return item.type === 'folder';
+        if (filters.type === 'image') {
+          const ext = (item.ext || '').toLowerCase();
+          return ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext);
+        }
+        if (filters.type === 'video') {
+          const ext = (item.ext || '').toLowerCase();
+          return ['mp4', 'avi', 'mov', 'mkv'].includes(ext);
+        }
+        if (filters.type === 'document') {
+          const ext = (item.ext || '').toLowerCase();
+          return ['pdf', 'doc', 'docx', 'xlsx', 'txt'].includes(ext);
+        }
+        if (filters.type === 'code') {
+          const ext = (item.ext || '').toLowerCase();
+          return ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'py', 'json'].includes(ext);
+        }
+        if (filters.type === 'music') {
+          const ext = (item.ext || '').toLowerCase();
+          return ['mp3', 'wav', 'flac'].includes(ext);
+        }
+        if (filters.type === 'archive') {
+          const ext = (item.ext || '').toLowerCase();
+          return ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext);
+        }
+        return true;
+      });
+    }
+
+    // Filtro per dimensione
+    if (filters.sizeMin > 0 || filters.sizeMax < Infinity) {
+      items = items.filter(item => {
+        if (item.type === 'folder') return true;
+        const sizeInMB = item.rawSize / (1024 * 1024);
+        return sizeInMB >= filters.sizeMin && sizeInMB <= filters.sizeMax;
+      });
+    }
+
+    return items;
+  }, [currentItems, debouncedSearch, filters]);
+
+  const navigateTo = useCallback((newPath) => {
+    try {
+      if (newPath === 'HOME' || (fs.existsSync(newPath) && fs.statSync(newPath).isDirectory())) {
+        setCurrentPath(newPath);
+        setHistory(prev => {
+          const newHistory = prev.slice(0, historyIndex + 1);
+          newHistory.push(newPath);
+          return newHistory;
+        });
+        setHistoryIndex(prev => prev + 1);
+        setSelectedItems([]);
+      }
+    } catch (e) {
+      console.error("Errore navigazione:", e);
+    }
+  }, [historyIndex]);
 
   const handleItemClick = (item) => {
-    if (item.type === 'folder' || item.type === 'drive') {
-      const separator = currentPath.endsWith('\\\\') ? '' : '\\\\';
-      navigateTo(`${currentPath}${separator}${item.name}\\\\`);
+    // Navigazione prioritaria per cartelle e drive
+    if (item.type === 'folder' || item.type === 'drive' || item.isDir) { 
+      navigateTo(item.fullPath);
+    } else {
+      // Apre file col programma di default
+      shell.openPath(item.fullPath);
     }
   };
 
@@ -290,14 +968,14 @@ export default function FileManager() {
   };
 
   const handleDeleteItems = () => {
-    const namesToDelete = selectedItems.map(i => i.name);
-    setFileSystem(prev => {
-      const newFS = { ...prev };
-      newFS[currentPath].children = newFS[currentPath].children.filter(i => !namesToDelete.includes(i.name));
-      return newFS;
-    });
-    setSelectedItems([]);
-    setContextMenu(null);
+    if (confirm(`Sei sicuro di voler spostare nel cestino ${selectedItems.length} elementi?`)) {
+      selectedItems.forEach(item => {
+        shell.trashItem(item.fullPath);
+      });
+      setTimeout(() => loadDirectory(currentPath), 500);
+      setSelectedItems([]);
+      setContextMenu(null);
+    }
   };
 
   // Selection Rectangle logic
@@ -366,48 +1044,70 @@ export default function FileManager() {
     setDragOverItem(null);
   };
 
-  const handleDrop = (e, targetFolderItem) => {
+  const handleDrop = async (e, targetFolderItem) => {
     e.preventDefault();
     setDragOverItem(null);
     setIsExternalDragOver(false);
 
+    const targetPath = targetFolderItem 
+      ? targetFolderItem.fullPath 
+      : currentPath;
+
+    if (targetPath === 'HOME') return;
+
+    // Gestione drop di file esterni (dal sistema operativo)
     if (e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
-      const newFiles = files.map(file => ({
-        name: file.name,
-        type: 'file',
-        size: (file.size / 1024 / 1024).toFixed(1) + ' MB',
-        date: new Date().toLocaleDateString()
-      }));
-
-      setFileSystem(prev => {
-        const newFS = { ...prev };
-        const destPath = targetFolderItem 
-          ? `${currentPath}${targetFolderItem.name}\\\\`
-          : currentPath;
-        
-        if (!newFS[destPath]) newFS[destPath] = { type: 'folder', children: [] };
-        newFS[destPath].children = [...newFS[destPath].children, ...newFiles];
-        return newFS;
-      });
+      try {
+        for (const file of files) {
+          const destPath = path.join(targetPath, path.basename(file.path));
+          if (fs.lstatSync(file.path).isDirectory()) {
+            fs.cpSync(file.path, destPath, { recursive: true });
+          } else {
+            fs.copyFileSync(file.path, destPath);
+          }
+        }
+        loadDirectory(currentPath);
+      } catch (err) {
+        console.error('Errore drop esterno:', err);
+        alert('Errore durante il caricamento dei file: ' + err.message);
+      }
       return;
     }
 
+    // Gestione drop interno (spostamento)
     const itemData = e.dataTransfer.getData('item');
     const sourcePath = e.dataTransfer.getData('sourcePath');
     if (!itemData || !sourcePath) return;
     
-    const draggedItem = JSON.parse(itemData);
-    const targetPath = targetFolderItem ? `${currentPath}${targetFolderItem.name}\\\\` : null;
-    if (!targetPath || targetPath === sourcePath) return;
+    try {
+      const draggedItem = JSON.parse(itemData);
+      const destPath = path.join(targetPath, draggedItem.name);
+      
+      if (draggedItem.fullPath === destPath) return;
 
-    setFileSystem(prev => {
-      const newFS = { ...prev };
-      newFS[sourcePath].children = newFS[sourcePath].children.filter(i => i.name !== draggedItem.name);
-      if (!newFS[targetPath]) newFS[targetPath] = { type: 'folder', children: [] };
-      newFS[targetPath].children = [...newFS[targetPath].children, draggedItem];
-      return newFS;
-    });
+      fs.renameSync(draggedItem.fullPath, destPath);
+      loadDirectory(currentPath);
+      setSelectedItems([]);
+    } catch (err) {
+      console.error('Errore drop interno:', err);
+      // Se fallisce il rename (es. tra drive diversi), prova copia e cancella
+      try {
+        const draggedItem = JSON.parse(e.dataTransfer.getData('item'));
+        const destPath = path.join(targetPath, draggedItem.name);
+        if (draggedItem.type === 'folder') {
+          fs.cpSync(draggedItem.fullPath, destPath, { recursive: true });
+          fs.rmSync(draggedItem.fullPath, { recursive: true });
+        } else {
+          fs.copyFileSync(draggedItem.fullPath, destPath);
+          fs.unlinkSync(draggedItem.fullPath);
+        }
+        loadDirectory(currentPath);
+        setSelectedItems([]);
+      } catch (cpErr) {
+        alert('Errore nello spostamento: ' + cpErr.message);
+      }
+    }
   };
 
   const goBack = () => {
@@ -427,12 +1127,13 @@ export default function FileManager() {
   };
 
   const goUp = () => {
-    const parts = currentPath.split('\\\\').filter(p => p);
+    if (currentPath === 'C:\\') return;
+    const parts = currentPath.split('\\').filter(p => p);
     if (parts.length > 1) {
       parts.pop();
-      navigateTo(parts.join('\\\\') + '\\\\');
-    } else if (parts.length === 1 && currentPath !== 'C:\\\\') {
-      navigateTo('C:\\\\');
+      navigateTo(parts.join('\\') + '\\');
+    } else {
+      navigateTo('C:\\');
     }
   };
 
@@ -471,10 +1172,11 @@ export default function FileManager() {
             <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Favoriti</p>
             <div className="space-y-1">
               {[
-                { name: 'Desktop', icon: ({ className }) => <FolderIcon colorScheme="red" className={className} />, path: 'C:\\\\Desktop\\\\' },
-                { name: 'Download', icon: ({ className }) => <FolderIcon colorScheme="green" className={className} />, path: 'C:\\\\Download\\\\' },
-                { name: 'Recenti', icon: Clock, path: 'C:\\\\' },
-              ].map((item) => (
+                { name: 'Home', icon: Home, path: 'HOME' },
+                systemPaths.desktop && { name: 'Desktop', icon: ({ className }) => <FolderIcon colorScheme="red" className={className} />, path: systemPaths.desktop },
+                systemPaths.downloads && { name: 'Download', icon: ({ className }) => <FolderIcon colorScheme="green" className={className} />, path: systemPaths.downloads },
+                systemPaths.documents && { name: 'Documenti', icon: ({ className }) => <FolderIcon colorScheme="blue" className={className} />, path: systemPaths.documents },
+              ].filter(Boolean).map((item) => (
                 <button
                   key={item.name}
                   onClick={() => navigateTo(item.path)}
@@ -493,13 +1195,13 @@ export default function FileManager() {
           </section>
 
           <section>
-            <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Cartelle</p>
+            <p className="px-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Librerie</p>
             <div className="space-y-1">
               {[
-                { name: 'Documenti', icon: ({ className }) => <FolderIcon colorScheme="blue" className={className} />, path: 'C:\\\\Documenti\\\\' },
-                { name: 'Immagini', icon: ({ className }) => <FolderIcon colorScheme="pink" className={className} />, path: 'C:\\\\Immagini\\\\' },
-                { name: 'Video', icon: ({ className }) => <FolderIcon colorScheme="teal" className={className} />, path: 'C:\\\\Video\\\\' },
-              ].map((item) => (
+                systemPaths.pictures && { name: 'Immagini', icon: ({ className }) => <FolderIcon colorScheme="pink" className={className} />, path: systemPaths.pictures },
+                systemPaths.videos && { name: 'Video', icon: ({ className }) => <FolderIcon colorScheme="teal" className={className} />, path: systemPaths.videos },
+                systemPaths.music && { name: 'Musica', icon: ({ className }) => <FolderIcon colorScheme="orange" className={className} />, path: systemPaths.music },
+              ].filter(Boolean).map((item) => (
                 <button
                   key={item.name}
                   onClick={() => navigateTo(item.path)}
@@ -507,7 +1209,7 @@ export default function FileManager() {
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200",
                     item.path === currentPath 
                       ? (isDarkMode ? "bg-sky-500/20 text-sky-400 font-semibold" : "bg-sky-50 text-sky-600 font-semibold")
-                      : "text-slate-500 hover:bg-slate-50"
+                      : (isDarkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-500 hover:bg-slate-50")
                   )}
                 >
                   <item.icon className={cn("w-4 h-4", item.path === currentPath ? "text-sky-500" : "text-slate-400")} />
@@ -526,7 +1228,10 @@ export default function FileManager() {
             {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
             {isDarkMode ? 'Tema Chiaro' : 'Tema Scuro'}
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+          <button 
+            onClick={() => setShowSettings(true)}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
             <Settings className="w-4 h-4" />
             Impostazioni
           </button>
@@ -552,20 +1257,57 @@ export default function FileManager() {
               )}
             >
               <div className="space-y-0.5">
-                {[
+                {(contextMenu.target ? [
                   { icon: ExternalLink, label: 'Apri', onClick: () => handleItemClick(contextMenu.target) },
-                  { icon: Edit3, label: 'Rinomina', onClick: () => {} },
-                  { icon: Copy, label: 'Copia', onClick: () => {} },
-                  { icon: Scissors, label: 'Taglia', onClick: () => {} },
-                  { icon: Share2, label: 'Condividi', onClick: () => {} },
+                  { icon: Edit3, label: 'Rinomina', onClick: () => {
+                    const newName = prompt('Nuovo nome:', contextMenu.target.name);
+                    if (newName && newName !== contextMenu.target.name) {
+                      try {
+                        const newPath = path.join(currentPath, newName);
+                        fs.renameSync(contextMenu.target.fullPath, newPath);
+                        loadDirectory(currentPath);
+                        setSelectedItems([]);
+                      } catch (err) { alert('Errore: ' + err.message); }
+                    }
+                  }},
+                  { icon: Copy, label: 'Copia', onClick: copyToClipboard },
+                  { icon: Scissors, label: 'Taglia', onClick: cutToClipboard },
                   { icon: Trash2, label: 'Elimina', color: 'text-rose-500', onClick: handleDeleteItems },
-                ].map((action, i) => (
+                ] : [
+                  { icon: FolderPlus, label: 'Nuova Cartella', onClick: () => {
+                    const name = prompt('Nome cartella:', 'Nuova Cartella');
+                    if (name) {
+                      try {
+                        const newPath = path.join(currentPath, name);
+                        if (!fs.existsSync(newPath)) {
+                          fs.mkdirSync(newPath);
+                          loadDirectory(currentPath);
+                        }
+                      } catch (err) { alert('Errore: ' + err.message); }
+                    }
+                  }},
+                  { icon: FilePlus, label: 'Nuovo File', onClick: () => {
+                    const name = prompt('Nome file:', 'nuovo_file.txt');
+                    if (name) {
+                      try {
+                        const newPath = path.join(currentPath, name);
+                        if (!fs.existsSync(newPath)) {
+                          fs.writeFileSync(newPath, '');
+                          loadDirectory(currentPath);
+                        }
+                      } catch (err) { alert('Errore: ' + err.message); }
+                    }
+                  }},
+                  { icon: Download, label: 'Incolla', onClick: pasteFromClipboard, disabled: clipboard.items.length === 0 },
+                  { icon: RefreshCw, label: 'Aggiorna', onClick: () => loadDirectory(currentPath) },
+                ]).map((action, i) => (
                   <button
                     key={i}
-                    onClick={(e) => { e.stopPropagation(); action.onClick(); }}
+                    disabled={action.disabled}
+                    onClick={(e) => { e.stopPropagation(); action.onClick(); setContextMenu(null); }}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
-                      isDarkMode ? "hover:bg-slate-800 text-slate-300" : "hover:bg-slate-50 text-slate-700",
+                      isDarkMode ? "hover:bg-slate-800 text-slate-300 disabled:opacity-30" : "hover:bg-slate-50 text-slate-700 disabled:opacity-30",
                       action.color
                     )}
                   >
@@ -596,13 +1338,31 @@ export default function FileManager() {
             isDarkMode ? "bg-slate-800 border-slate-700" : "bg-slate-100/50 border-slate-200"
           )}>
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
-              <button onClick={() => navigateTo('C:\\\\')} className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-sky-500/20 text-slate-500 transition-colors"><HardDrive className="w-4 h-4" /><span className="text-sm font-medium">C:</span></button>
-              {currentPath.split('\\\\').filter(p => p && p !== 'C:').map((part, i) => (
-                <React.Fragment key={i}>
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
-                  <button className="px-2 py-1 rounded-md hover:bg-sky-500/20 text-slate-500 text-sm font-medium">{part}</button>
-                </React.Fragment>
-              ))}
+              {currentPath === 'HOME' ? (
+                <button className="flex items-center gap-1 px-2 py-1 rounded-md bg-sky-500/20 text-sky-500 transition-colors">
+                  <Home className="w-4 h-4" /><span className="text-sm font-medium">Questo PC</span>
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => navigateTo('HOME')} className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-sky-500/20 text-slate-500 transition-colors">
+                    <Home className="w-4 h-4" /><span className="text-sm font-medium">Questo PC</span>
+                  </button>
+                  {currentPath.split(path.sep).filter(p => p).map((part, i, arr) => (
+                    <React.Fragment key={i}>
+                      <ChevronRight className="w-4 h-4 text-slate-600" />
+                      <button 
+                        onClick={() => {
+                          const targetPath = currentPath.split(path.sep).slice(0, currentPath.split(path.sep).indexOf(part) + 1).join(path.sep) + (part.includes(':') ? path.sep : '');
+                          navigateTo(targetPath);
+                        }}
+                        className="px-2 py-1 rounded-md hover:bg-sky-500/20 text-slate-500 text-sm font-medium"
+                      >
+                        {part}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </>
+              )}
             </div>
           </div>
 
@@ -622,8 +1382,8 @@ export default function FileManager() {
             </div>
             
             <div className={cn("flex items-center p-1 rounded-lg", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
-              <button onClick={() => setViewMode('grid')} className={cn("p-1.5 rounded-md transition-all uppercase text-[10px] font-bold px-3", viewMode === 'grid' ? "bg-sky-500 text-white shadow-lg shadow-sky-500/40" : "text-slate-500")}>Grid</button>
-              <button onClick={() => setViewMode('list')} className={cn("p-1.5 rounded-md transition-all uppercase text-[10px] font-bold px-3", viewMode === 'list' ? "bg-sky-500 text-white shadow-lg shadow-sky-500/40" : "text-slate-500")}>List</button>
+              <button onClick={() => setViewMode('grid')} className={cn("p-1.5 rounded-md transition-all uppercase text-[10px] font-bold px-3", viewMode === 'grid' ? "bg-sky-500 text-white shadow-lg shadow-sky-500/40" : (isDarkMode ? "text-slate-400" : "text-slate-500"))}>Grid</button>
+              <button onClick={() => setViewMode('list')} className={cn("p-1.5 rounded-md transition-all uppercase text-[10px] font-bold px-3", viewMode === 'list' ? "bg-sky-500 text-white shadow-lg shadow-sky-500/40" : (isDarkMode ? "text-slate-400" : "text-slate-500"))}>List</button>
             </div>
           </div>
         </header>
@@ -666,23 +1426,95 @@ export default function FileManager() {
           <div className="flex-1 overflow-y-auto p-8 scroll-smooth">
             <div className="flex items-center justify-between mb-8 animate-in">
               <h2 className="text-2xl font-extrabold tracking-tight">
-                {currentPath.split('\\\\').filter(Boolean).pop() || 'CosmoNav'}
-                <span className="ml-4 text-xs font-bold text-sky-500 bg-sky-500/10 px-2 py-1 rounded-full">{currentItems.length} OGGETTI</span>
+                {currentPath === 'HOME' ? 'Questo PC' : currentPath.split(path.sep).filter(Boolean).pop()}
+                <span className="ml-4 text-xs font-bold text-sky-500 bg-sky-500/10 px-2 py-1 rounded-full">{filteredItems.length} OGGETTI</span>
               </h2>
-              <button className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-sky-500 text-white text-sm font-bold hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/20">
+              <button 
+                onClick={() => {
+                  const name = prompt('Nome cartella:', 'Nuova Cartella');
+                  if (name && currentPath !== 'HOME') {
+                    try {
+                      const newPath = path.join(currentPath, name);
+                      if (!fs.existsSync(newPath)) {
+                        fs.mkdirSync(newPath);
+                        loadDirectory(currentPath);
+                      } else {
+                        alert('La cartella esiste già!');
+                      }
+                    } catch (err) { alert('Errore: ' + err.message); }
+                  }
+                }}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-sky-500 text-white text-sm font-bold hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/20"
+              >
                 <FolderPlus className="w-4 h-4" />Nuova Cartella
               </button>
             </div>
 
-            <motion.div
-              layout
+            {/* 📊 HEADER COLONNE RIDIMENSIONABILI - Solo in List View */}
+            {viewMode === 'list' && filteredItems.length > 0 && (
+              <div 
+                className={cn(
+                  "grid items-center gap-4 px-6 py-3 mb-2 rounded-xl border-b sticky top-0 z-10 select-none",
+                  isDarkMode ? "bg-slate-900/95 border-slate-800 backdrop-blur-sm" : "bg-slate-100/95 border-slate-200 backdrop-blur-sm"
+                )}
+                style={{
+                  gridTemplateColumns: `${columnWidths.name}px ${columnWidths.date}px ${columnWidths.type}px ${columnWidths.size}px`
+                }}
+              >
+                {/* Colonna NOME */}
+                <div className="relative flex items-center gap-2 group h-full">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 overflow-hidden whitespace-nowrap">
+                    <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                    Nome
+                  </div>
+                  {/* Resizer Handle */}
+                  <div 
+                    className="absolute right-[-18px] top-0 bottom-0 w-4 cursor-col-resize z-20 hover:bg-sky-500/20 active:bg-sky-500/50 transition-colors rounded"
+                    onMouseDown={(e) => startResizing(e, 'name')}
+                  />
+                </div>
+
+                {/* Colonna DATA */}
+                <div className="relative flex items-center gap-2 group h-full">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 overflow-hidden whitespace-nowrap">
+                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                    Data Modifica
+                  </div>
+                  <div 
+                    className="absolute right-[-18px] top-0 bottom-0 w-4 cursor-col-resize z-20 hover:bg-sky-500/20 active:bg-sky-500/50 transition-colors rounded"
+                    onMouseDown={(e) => startResizing(e, 'date')}
+                  />
+                </div>
+
+                {/* Colonna TIPO */}
+                <div className="relative flex items-center gap-2 group h-full">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 overflow-hidden whitespace-nowrap">
+                    <Tag className="w-3.5 h-3.5 flex-shrink-0" />
+                    Tipo
+                  </div>
+                  <div 
+                    className="absolute right-[-18px] top-0 bottom-0 w-4 cursor-col-resize z-20 hover:bg-sky-500/20 active:bg-sky-500/50 transition-colors rounded"
+                    onMouseDown={(e) => startResizing(e, 'type')}
+                  />
+                </div>
+
+                {/* Colonna DIMENSIONE */}
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 justify-end overflow-hidden whitespace-nowrap">
+                  <HardDrive className="w-3.5 h-3.5 flex-shrink-0" />
+                  Dimensione
+                </div>
+              </div>
+            )}
+
+            <div
               className={cn(
+                "min-h-0 overflow-y-auto custom-scrollbar p-2", // Rimosso motion.div e layout prop per performance
                 viewMode === 'grid' 
-                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-8"
+                  ? "grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2"
                   : "flex flex-col space-y-1"
               )}
             >
-              {currentItems.map((item) => {
+              {filteredItems.map((item) => {
                 const isSelected = selectedItems.some(i => i.name === item.name);
                 const isHoveredAsDropTarget = dragOverItem === item.name;
                 
@@ -698,40 +1530,89 @@ export default function FileManager() {
                     onContextMenu={(e) => handleContextMenu(e, item)}
                     onClick={(e) => handleItemSelect(item, e)}
                     onDoubleClick={() => handleItemClick(item)}
+                    style={viewMode === 'list' ? {
+                      display: 'grid',
+                      gridTemplateColumns: `${columnWidths.name}px ${columnWidths.date}px ${columnWidths.type}px ${columnWidths.size}px`,
+                      alignItems: 'center',
+                      gap: '1rem'
+                    } : {}}
                     className={cn(
-                      "selectable-item group relative flex flex-col items-center justify-between transition-all duration-300 rounded-3xl cursor-pointer",
-                      viewMode === 'grid' ? "p-4" : "flex-row px-6 py-3",
-                      isSelected 
-                        ? (isDarkMode ? "bg-sky-500/20 ring-2 ring-sky-500/50" : "bg-sky-50 ring-2 ring-sky-500/20") 
-                        : (isDarkMode ? "hover:bg-slate-900" : "hover:bg-slate-50"),
-                      isHoveredAsDropTarget && "bg-sky-500/30 scale-105"
+                      "selectable-item group relative transition-all duration-200 rounded-lg cursor-pointer overflow-hidden border border-transparent select-none",
+                      viewMode === 'grid' 
+                        ? "flex flex-col items-center justify-between p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 min-h-[140px]" 
+                        : "px-6 py-2 hover:bg-sky-50 dark:hover:bg-sky-900/10 border-b border-slate-50 dark:border-slate-800/50",
+                      isSelected && "bg-sky-50 dark:bg-sky-900/20 border-sky-500/30 ring-1 ring-sky-500/30 z-10",
+                      isHoveredAsDropTarget && "bg-sky-500/30 scale-105 ring-2 ring-sky-500"
                     )}
                   >
-                    <div className={cn("relative", viewMode === 'grid' ? "mb-4" : "mr-4")}>
-                      {getFileIcon(item.name, item.type)}
-                      {isSelected && (
-                        <motion.div layoutId="check" className="absolute -top-1 -right-1 bg-sky-500 rounded-full p-1 border-2 border-white dark:border-slate-950">
-                          <ChevronRight className="w-2 h-2 text-white" />
-                        </motion.div>
-                      )}
-                    </div>
-                    
-                    <div className={cn("text-center flex-1 min-w-0", viewMode === 'list' && "flex items-center text-left")}>
-                      <span className={cn(
-                        "text-xs font-bold truncate block",
-                        isSelected ? "text-sky-500" : (isDarkMode ? "text-slate-300" : "text-slate-700")
-                      )}>{item.name}</span>
-                      {viewMode === 'list' && (
-                        <>
-                          <span className="ml-auto text-[10px] text-slate-500 uppercase font-black tracking-widest px-8">{item.date}</span>
-                          <span className="w-24 text-[10px] text-slate-500 font-bold text-right uppercase">{item.size}</span>
-                        </>
-                      )}
-                    </div>
+                    {viewMode === 'list' ? (
+                       // LIST VIEW CONTENT (Aligned Columns)
+                       <>
+                         <div className="flex items-center gap-3 overflow-hidden h-full min-w-0">
+                           <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                              {getFileIcon(item.name, item.type, null, item)}
+                           </div>
+                           <span className="truncate font-semibold text-sm text-slate-900 dark:text-slate-100" title={item.name}>
+                              {item.name}
+                           </span>
+                         </div>
+                         
+                          <div className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate">
+                             {formatDate(item.lastModified) || item.date}
+                          </div>
+                         
+                         <div className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider truncate">
+                             {item.type === 'folder' ? 'Cartella' : item.type === 'drive' ? 'Disco' : item.ext?.toUpperCase() || 'File'}
+                         </div>
+                         
+                         <div className="text-xs font-mono text-slate-600 dark:text-slate-400 text-right truncate">
+                             {item.type === 'drive' ? `${item.freeSize} disp. su ${item.totalSize}` : item.size}
+                         </div>
+                       </>
+                    ) : (
+                       // GRID VIEW CONTENT (Card)
+                       <>
+                          <div className="relative mb-3 w-full flex-1 flex items-center justify-center pointer-events-none">
+                            <div className="w-12 h-12 flex items-center justify-center">
+                              {getFileIcon(item.name, item.type, item.preview, item)}
+                            </div>
+                            {isSelected && (
+                              <div className="absolute -top-1 -right-1 bg-sky-500 rounded-full p-1 shadow-sm z-10 w-5 h-5 flex items-center justify-center border-2 border-white dark:border-slate-900">
+                                <ChevronRight className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="w-full text-center">
+                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate w-full mb-1 px-1" title={item.name}>
+                              {item.name}
+                            </p>
+                            
+                            {item.type === 'drive' ? (
+                                <div className="w-full px-1">
+                                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-1">
+                                    <div 
+                                      className={cn("h-full", item.usedPercent > 90 ? "bg-rose-500" : "bg-sky-500")} 
+                                      style={{ width: `${item.usedPercent}%` }} 
+                                    />
+                                  </div>
+                                  <div className="flex justify-between text-[9px] text-slate-400">
+                                    <span>{item.usedPercent}%</span>
+                                    <span>{item.freeSize}</span>
+                                  </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center text-[10px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                   <span>{item.size !== '--' ? item.size : (formatDate(item.lastModified) || item.date)}</span>
+                                </div>
+                            )}
+                          </div>
+                       </>
+                    )}
                   </motion.div>
                 );
               })}
-            </motion.div>
+            </div>
           </div>
 
           <AnimatePresence>
@@ -759,9 +1640,21 @@ export default function FileManager() {
 
                     <div className="space-y-6">
                       {[
-                        { label: 'Dimensione', value: selectedItems[0].size, icon: HardDrive },
-                        { label: 'Creato il', value: selectedItems[0].date, icon: Clock },
-                        { label: 'Percorso', value: currentPath, icon: Home },
+                        { 
+                          label: 'Dimensione', 
+                          value: selectedItems[0].type === 'drive' ? selectedItems[0].totalSize : selectedItems[0].size, 
+                          icon: HardDrive 
+                        },
+                        { 
+                          label: selectedItems[0].type === 'drive' ? 'Spazio Libero' : 'Modificato il', 
+                          value: selectedItems[0].type === 'drive' ? selectedItems[0].freeSize : (formatDate(selectedItems[0].lastModified) || selectedItems[0].date), 
+                          icon: Clock 
+                        },
+                        { 
+                          label: 'Percorso', 
+                          value: selectedItems[0].type === 'drive' ? selectedItems[0].fullPath : currentPath, 
+                          icon: Home 
+                        },
                       ].map(row => (
                         <div key={row.label} className="flex items-start gap-4 p-4 rounded-2xl hover:bg-sky-500/5 transition-colors">
                           <div className="bg-sky-500/10 p-2.5 rounded-xl"><row.icon className="w-4 h-4 text-sky-500" /></div>
@@ -774,7 +1667,12 @@ export default function FileManager() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 pt-4">
-                      <button className="flex items-center justify-center gap-2 px-6 py-4 rounded-3xl bg-sky-500 text-white text-xs font-black uppercase tracking-widest hover:bg-sky-600 transition-all shadow-lg shadow-sky-500/20 active:scale-95"><Copy className="w-4 h-4" /> Copia</button>
+                      <button 
+                        onClick={copyToClipboard}
+                        className="flex items-center justify-center gap-2 px-6 py-4 rounded-3xl bg-sky-500 text-white text-xs font-black uppercase tracking-widest hover:bg-sky-600 transition-all shadow-lg shadow-sky-500/20 active:scale-95"
+                      >
+                        <Copy className="w-4 h-4" /> Copia
+                      </button>
                       <button onClick={handleDeleteItems} className="flex items-center justify-center gap-2 px-6 py-4 rounded-3xl bg-rose-500/10 text-rose-500 text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all active:scale-95"><Trash2 className="w-4 h-4" /> Elimina</button>
                     </div>
                   </div>
@@ -802,12 +1700,100 @@ export default function FileManager() {
             {selectedItems.length > 0 && <span className="flex items-center gap-2 text-sky-500"><Star className="w-3 h-3" /> {selectedItems.length} SELEZIONATI</span>}
           </div>
           <div className="flex items-center gap-6">
-            <span className="animate-pulse text-sky-500">Signal Strength: 100%</span>
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">
-              <HardDrive className="w-3 h-3" /> 450 GB LIBERI / 1 TB
-            </div>
+            {/* Signal Strength RIMOSSO */}
+            {(() => {
+                const currentDrive = drives.find(d => currentPath.startsWith(d.shortName) || (d.fullPath && currentPath.startsWith(d.fullPath)));
+                if (currentDrive) {
+                    return (
+                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                          <HardDrive className="w-3 h-3" /> 
+                          {currentDrive.freeSize} LIBERI su {currentDrive.totalSize}
+                        </div>
+                    );
+                }
+                return null;
+            })()}
           </div>
         </footer>
+        
+        {/* Modals Integration */}
+        <AnimatePresence>
+          {showPreview && previewItem && (
+            <QuickPreviewModal 
+              item={previewItem} 
+              isDarkMode={isDarkMode} 
+              onClose={() => setShowPreview(false)} 
+            />
+          )}
+
+          {showStats && folderStats && (
+            <FolderStatsModal 
+              stats={folderStats} 
+              isDarkMode={isDarkMode} 
+              onClose={() => setShowStats(false)} 
+            />
+          )}
+
+          {showBulkRename && (
+            <BulkRenameModal 
+              items={selectedItems}
+              pattern={bulkRenamePattern}
+              setPattern={setBulkRenamePattern}
+              onApply={applyBulkRename}
+              onClose={() => setShowBulkRename(false)}
+              isDarkMode={isDarkMode}
+            />
+          )}
+
+          {showSettings && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setShowSettings(false)}
+            >
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                className={cn("w-full max-w-md p-8 rounded-[40px] shadow-2xl", isDarkMode ? "bg-slate-900 border border-slate-800" : "bg-white border border-slate-200")}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-2xl font-black">Impostazioni</h2>
+                  <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-500/5">
+                    <span className="font-bold">Tema Scuro</span>
+                    <button 
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      className={cn("w-14 h-8 rounded-full transition-colors relative flex items-center px-1", isDarkMode ? "bg-sky-500" : "bg-slate-300")}
+                    >
+                      <motion.div 
+                        animate={{ x: isDarkMode ? 24 : 0 }}
+                        className="w-6 h-6 bg-white rounded-full shadow-md"
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-500/5">
+                    <span className="font-bold">Vista Lista/Griglia</span>
+                    <div className="flex gap-2">
+                       <button onClick={() => setViewMode('grid')} className={cn("p-2 rounded-lg transition-colors", viewMode === 'grid' ? "bg-sky-500 text-white" : "bg-slate-800 text-slate-400")}><Grid className="w-5 h-5" /></button>
+                       <button onClick={() => setViewMode('list')} className={cn("p-2 rounded-lg transition-colors", viewMode === 'list' ? "bg-sky-500 text-white" : "bg-slate-800 text-slate-400")}><List className="w-5 h-5" /></button>
+                    </div>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="w-full mt-10 py-4 bg-sky-500 text-white font-black rounded-3xl shadow-xl shadow-sky-500/20 hover:scale-[1.02] transition-transform"
+                >
+                  SALVA E CHIUDI
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

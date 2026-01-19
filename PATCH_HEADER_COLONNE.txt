@@ -1,0 +1,61 @@
+// ISTRUZIONI PER AGGIUNGERE HEADER COLONNE
+
+// Trova questa riga nell'App.jsx (circa linea 1253):
+//             </div>
+//
+//             <motion.div
+
+// Aggiungi questo codice TRA i due blocchi:
+
+            {/* 📊 HEADER COLONNE - Solo in List View */}
+            {viewMode === 'list' && filteredItems.length > 0 && (
+              <div className={cn(
+                "grid items-center gap-4 px-6 py-3 mb-2 rounded-xl border-b",
+                "grid-cols-[minmax(200px,2fr)_150px_120px_120px]",
+                isDarkMode ? "bg-slate-900/95 border-slate-800 backdrop-blur-sm" : "bg-slate-100/95 border-slate-200 backdrop-blur-sm"
+              )}>
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
+                  <FileText className="w-3.5 h-3.5" />
+                  Nome
+                </div>
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  Data Modifica
+                </div>
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
+                  <Tag className="w-3.5 h-3.5" />
+                  Tipo
+                </div>
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 justify-end">
+                  <HardDrive className="w-3.5 h-3.5" />
+                  Dimensione
+                </div>
+              </div>
+            )}
+
+// INOLTRE, devi modificare la vista List per avere le stesse colonne.
+// Trova (circa linea 1334):
+//                       {viewMode === 'list' && (
+
+// E sostituisci il contenuto sotto con questo layout a colonne:
+                      {viewMode === 'list' && (
+                        <div className="grid grid-cols-[minmax(200px,2fr)_150px_120px_120px] gap-4 items-center flex-1">
+                          {/* Nome già renderizzato sopra, spacer */}
+                          <div></div>
+                          
+                          {/* Data Modifica */}
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            {item.date}
+                          </span>
+                          
+                          {/* Tipo */}
+                          <span className="text-[11px] text-slate-400 font-medium uppercase">
+                            {item.type === 'folder' ? 'Cartella' : item.ext || 'File'}
+                          </span>
+                          
+                          {/* Dimensione */}
+                          <span className="text-[11px] text-slate-400 font-medium text-right">
+                            {item.type === 'drive' ? item.totalSize : item.size}
+                          </span>
+                        </div>
+                      )}
